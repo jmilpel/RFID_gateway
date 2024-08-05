@@ -2,6 +2,7 @@ from utils import decorator
 import time
 import pytz
 import datetime
+import binascii
 import crc16
 
 
@@ -122,3 +123,61 @@ def encode_woxu_coordinate(number, length=8):
     if zero_size:
         result = result + '0' * zero_size
     return result
+
+
+@decorator.catch_exceptions
+def convert_data_to_hexstring(data):
+    return binascii.hexlify(data).decode()
+
+
+@decorator.catch_exceptions
+def convert_str_to_bin(string):
+    bin_text = ' '.join(format(ord(char), '08b') for char in string)
+    return bin_text
+
+
+@decorator.catch_exceptions
+def convert_str_to_hex(string):
+    return bytes.fromhex(string)
+
+
+@decorator.catch_exceptions
+def convert_str_to_hex_to_int(string):
+    hex_bytes = bytes.fromhex(string)
+    return int.from_bytes(hex_bytes, byteorder="big")
+
+
+@decorator.catch_exceptions
+def convert_hex_to_bin(hex_value):
+    return bin(int(hex_value, 16))[2:]
+
+
+def convert_hex_to_int(hex_value):
+    return int(hex_value, 16)
+
+
+def convert_bin_to_dec(bin_value):
+    return int(bin_value, 2)
+
+
+def print_tags(table):
+    print("\n")
+    print("|Nº\t|PC\t|EPC\t\t\t\t\t\t|CRC\t|RSSI\t|CNT\t|ANT\t|")
+    print("---------------------------------------------------------------------")
+
+    iterator = iter(table)
+    index = 1
+
+    while True:
+        try:
+            element = next(iterator)
+            print(
+                f"{index}\t|{element['PC']}|{element['EPC']}\t|{element['CRC']}\t|{element['RSSI']}\t|{element['CNT']}"
+                f"\t\t|{element['ANT']}\t\t|")
+            index += 1
+        except StopIteration:
+            break
+
+
+def int_rssi(rssi):
+    return convert_str_to_hex_to_int(rssi) - 255
