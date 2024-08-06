@@ -27,6 +27,7 @@ def connect_to_rabbitmq():
     channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
     print('Conectado al RabbitAMQP')
     logger.info('Conectado al RabbitAMQP')
+    common.con
     return connection, channel
 
 

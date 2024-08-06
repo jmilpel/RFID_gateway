@@ -46,7 +46,7 @@ class Publisher:
     def simple_publish(self, msg):
         """ Simple publish message. It will be called from publish method"""
         try:
-            self.channel.basic_publish(exchange=self.exchange, routing_key=self.queue, body=encode(msg))
+            self.channel.basic_publish(exchange=self.exchange, routing_key=self.queue, body=msg)  # body=encode(msg)
             loggerRabbit.info('AMQP message: %s', msg)
         except Exception as e:
             msg['retry'] = msg['retry'] + 1 if 'retry' in msg else 1

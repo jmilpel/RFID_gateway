@@ -27,7 +27,7 @@ def manage_received_data(serial_data):
     while True:
         hex_string = common.convert_data_to_hexstring(serial_data)
         logger.info('-->[RAW DATA]: %s', hex_string)
-        print('RAW data:', hex_string)
+        # print('RAW data:', hex_string)
         dataframes = hex_string.split("1500")
         # print(dataframes)
         return dataframes
@@ -39,6 +39,7 @@ def publish_dataframes(processed_data):
             timestamp = common.get_now_timestamp()
             dataframe = "1500" + dataframe + common.convert_int_to_hex_string(timestamp)
             amqp_publisher.publish(dataframe)
+            print(dataframe)
 
 
 def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baurdate):
@@ -60,7 +61,7 @@ def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baurdate):
         while True:
             # Read data from serial port
             # serial_data = ser.readline().decode('utf-8').strip()
-            serial_data = ser.read(1000)
+            serial_data = ser.read(3000)
             # print(serial_data)
 
             if serial_data:
