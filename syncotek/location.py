@@ -5,10 +5,8 @@ from config import config
 from logger import loggerErrors # loggerAnchor, loggerInvestigate
 
 
-UWB = config.UWB
 BROKER_AMQP = config.BROKER_AMQP
 # BROKER_MQTT = config.BROKER_MQTT
-tag_middle_altitude = int(UWB['tag_middle_altitude'])
 
 # logger_protocol = loggerAnchor.get_logger()
 # logger_investigate = loggerInvestigate.get_logger()

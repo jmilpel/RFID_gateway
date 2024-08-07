@@ -8,7 +8,7 @@ LOG = LOG_FOLDER + LOG_FILE
 
 
 try:
-    logger = logging.getLogger('server')
+    logger = logging.getLogger('main')
     loggerHandler = logging.handlers.TimedRotatingFileHandler(filename=LOG, when='midnight', interval=1, backupCount=DAYS_FOR_ROTATE)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     loggerHandler.setFormatter(formatter)

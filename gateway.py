@@ -1,15 +1,14 @@
 from concurrent.futures import ProcessPoolExecutor
-from logger import loggerMain
 from config import config
-import socket
 from syncotek import core
+# from logger import loggerMain
+# import socket
 
 
 READER = config.READER
-SERVER = config.SERVER
-CLIENT = config.CLIENT
-
-logger = loggerMain.get_logger()
+# SERVER = config.SERVER
+# CLIENT = config.CLIENT
+# logger = loggerMain.get_logger()
 
 
 def main():
