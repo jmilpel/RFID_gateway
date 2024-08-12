@@ -6,6 +6,23 @@ import binascii
 import crc16
 
 
+PRESET_VALUE = 0xFFFF
+POLYNOMIAL = 0x8408
+
+@decorator.catch_exceptions
+def ui_crc16_cal(puc_y, uc_x):
+    ui_crc_value = PRESET_VALUE
+    for uc_i in range(uc_x):
+        ui_crc_value ^= puc_y[uc_i]
+    for _ in range(8):
+        if ui_crc_value & 0x0001:
+            ui_crc_value = (ui_crc_value >> 1) ^ POLYNOMIAL
+        else:
+            ui_crc_value = (ui_crc_value >> 1)
+    return ui_crc_value
+
+
+
 @decorator.catch_exceptions
 def get_now_timestamp(units='seconds'):
     """ Get now timestamp"""
