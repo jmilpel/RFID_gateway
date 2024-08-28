@@ -2,14 +2,15 @@ import logging.handlers
 from config import config
 
 LOG_FOLDER = config.LOG_FOLDER
-LOG_FILE = config.LOG_ERRORS_FILE
+LOG_FILE = config.LOG_GATEWAY_FILE
 DAYS_FOR_ROTATE = int(config.LOG_DAYS_FOR_ROTATE)
 LOG = LOG_FOLDER + LOG_FILE
 
 
 try:
-    logger = logging.getLogger('errors')
-    loggerHandler = logging.handlers.TimedRotatingFileHandler(filename=LOG, when='midnight', interval=1, backupCount=DAYS_FOR_ROTATE)
+    logger = logging.getLogger('gateway')
+    loggerHandler = logging.handlers.TimedRotatingFileHandler(filename=LOG, when='midnight', interval=1,
+                                                              backupCount=DAYS_FOR_ROTATE)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     loggerHandler.setFormatter(formatter)
     logger.addHandler(loggerHandler)

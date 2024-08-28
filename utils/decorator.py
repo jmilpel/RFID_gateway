@@ -1,12 +1,11 @@
 from functools import wraps
-from logger import loggerMain
 import sys
 import os
 import traceback
 import datetime
-# from config import config
+from logger import loggerGateway
 
-logger_main = loggerMain.get_logger()
+loggerGateway = loggerGateway.get_logger()
 # logger_mongo = loggerMongo.get_logger()
 
 # MONGO = config.MONGO
@@ -21,7 +20,7 @@ def catch_exceptions(function):
             return result
         except Exception as error:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            logger_main.error("%s -- function %s -- args %s --kwargs %s -- line %s: %s",
+            loggerGateway.error("%s -- function %s -- args %s --kwargs %s -- line %s: %s",
                               os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__, args, kwargs,
                               traceback.extract_tb(exc_tb)[-1][1], str(error))
     return decorator
@@ -35,9 +34,9 @@ def catch_exceptions_and_performance(function):
             result = function(*args, **kwargs)
             end = datetime.datetime.now()
             execution_time = ((end - start) * 1000).seconds
-            logger_main.info("%s-%s-%d ms", os.path.split(function.__code__.co_filename)[1], function.__name__, execution_time)
+            loggerGateway.info("%s-%s-%d ms", os.path.split(function.__code__.co_filename)[1], function.__name__, execution_time)
             return result
         except Exception as error:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            logger_main.error("%s -- function %s -- line %s: %s", os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__, traceback.extract_tb(exc_tb)[-1][1], str(error))
+            loggerGateway.error("%s -- function %s -- line %s: %s", os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__, traceback.extract_tb(exc_tb)[-1][1], str(error))
     return decorator

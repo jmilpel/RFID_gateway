@@ -22,7 +22,9 @@ class LoggerClass:
 
         try:
             self.logger = logging.getLogger(logger_name)
-            loggerHandler = logging.handlers.TimedRotatingFileHandler(filename=self.path, when='midnight', interval=1, backupCount=int(self.config['log']['days_for_rotate']))
+            loggerHandler = logging.handlers.TimedRotatingFileHandler(filename=self.path, when='midnight', interval=1,
+                                                                      backupCount=int(self.config['log']
+                                                                                      ['days_for_rotate']))
             formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
             loggerHandler.setFormatter(formatter)
             self.logger.addHandler(loggerHandler)

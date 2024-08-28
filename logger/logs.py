@@ -9,6 +9,7 @@ logger_errors = LoggerClass.LoggerClass('errors')
 def get_logger_main():
     return logger_main.get_logger()
 
+
 def get_logger_rabbit():
     return logger_rabbit.get_logger()
 

@@ -1,12 +1,13 @@
 from config import config
 from logger import loggerRabbit
-from ujson import encode
+# from ujson import encode
 import pika
 import pika.exceptions
 
 loggerRabbit = loggerRabbit.get_logger()
 
 BROKER_AMQP = config.BROKER_AMQP
+
 
 class Publisher:
     """ Class publisher for publish message at RabbitMQ broker
@@ -52,7 +53,8 @@ class Publisher:
             msg['retry'] = msg['retry'] + 1 if 'retry' in msg else 1
             self.connection.close()
             self.publish(msg=msg)
-            loggerRabbit.error('-- Error publishing message %s at rabbit with simple_publish method: %s --', str(msg), str(e))
+            loggerRabbit.error('-- Error publishing message %s at rabbit with simple_publish method: %s --', str(msg),
+                               str(e))
 
     def publish(self, msg):
         """Publish msg, reconnecting if necessary"""
@@ -75,11 +77,13 @@ class Publisher:
                 self.connect()
                 self.simple_publish(msg=msg)
             except pika.exceptions.AMQPConnectionError as e:
-                loggerRabbit.error('-- Error publishing message %s at rabbit. AMQP connection error: %s --', str(msg), str(e))
+                loggerRabbit.error('-- Error publishing message %s at rabbit. AMQP connection error: %s --', str(msg),
+                                   str(e))
                 self.connect()
                 self.simple_publish(msg=msg)
             except pika.exceptions.AMQPChannelError as e:
-                loggerRabbit.error('-- Error publishing message %s at rabbit. AMQP channel error: %s --', str(msg), str(e))
+                loggerRabbit.error('-- Error publishing message %s at rabbit. AMQP channel error: %s --', str(msg),
+                                   str(e))
                 self.connect()
                 self.simple_publish(msg=msg)
             except Exception as e:
