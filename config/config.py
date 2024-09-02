@@ -4,7 +4,9 @@ from configobj import ConfigObj
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = ConfigObj(os.path.join(BASE, 'config.cfg'))
 
-READER = CONFIG['reader']
+READERS = CONFIG['readers']
+READER0 = CONFIG['reader0']
+READER1 = CONFIG['reader1']
 LOG = CONFIG['log']
 BROKER_AMQP = CONFIG['broker_amqp']
 
