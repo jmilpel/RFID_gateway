@@ -56,12 +56,12 @@ def publish_dataframes(processed_data, ser):
 
 
 @decorator.catch_exceptions
-def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baudrate, retry_delay):
+def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baud_rate, retry_delay):
     """Read data from the serial port, process it, and send it to RabbitMQ."""
     while True:  # max_retries > 0:
         try:
             # Connect to serial port
-            ser = serial.Serial(serial_port, serial_baudrate, timeout=0.2)  # 57600
+            ser = serial.Serial(serial_port, serial_baud_rate, timeout=0.2)  # 57600
             if ser:
                 print('Connected to', ser.port)
                 loggerGateway.info('Connected to the reader at %s', ser.port)
@@ -78,7 +78,7 @@ def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baudrate, retry_de
                 # serial_data = ser.readline().decode('utf-8').strip()
                 # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
                 # value of 3000 is also valid
-                serial_data = ser.read(3000)
+                serial_data = ser.read(1024)
 
                 if serial_data:
                     # Process the serial data
@@ -92,17 +92,23 @@ def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baudrate, retry_de
             print(f"Trying to reconnect to", serial_port)
             time.sleep(retry_delay)
 
+
 @decorator.catch_exceptions
 def read_from_ethernet_and_send_to_rabbitmq(ip, port, retry_delay):
     # delay = retry_delay
     while True:
         try:
             # Create a socket and connect to the reader
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            conn = client_socket.connect((ip, port))
-            if conn:
-                print('Connected to', ip, ':', port)
-                loggerGateway.info('Connected to the reader at %s:%s', ip, port)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Connect to a remote host and port
+            error_code = sock.connect_ex((ip, port))
+
+            if error_code == 0:
+                print('Connection established successfully to', ip, ':', port)
+                loggerGateway.info('Connected to the reader at IP --> %s:%s', ip, port)
+            else:
+                print('Error connecting:', error_code)
+                loggerGateway.info('Error connecting %s', error_code)
 
             loggerRabbit.info('Connecting to RabbitAMQP server ...')
             amqp_publisher.connect()
@@ -113,16 +119,16 @@ def read_from_ethernet_and_send_to_rabbitmq(ip, port, retry_delay):
 
             while True:
                 """ Read data from serial port, process and publish them """
-                # serial_data = ser.readline().decode('utf-8').strip()
                 # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
                 # value of 3000 is also valid
-                eth_data = client_socket.recv(3000)
+                eth_data, address = sock.recvfrom(1024)
+                print(eth_data)
 
-                if eth_data:
+                """if eth_data:
                     # Process the serial data
                     processed_data = manage_received_data(eth_data)
                     # Publish messages
-                    publish_dataframes(processed_data, ip)
+                    publish_dataframes(processed_data, ip)"""
 
         except Exception as e:
             # max_retries -= 1
