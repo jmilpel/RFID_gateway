@@ -13,6 +13,8 @@ def main():
     loggerGateway.info('Initialize process pool executor for reader ...')
     reader_pool = ProcessPoolExecutor()
     """ Depends on the type of connection we call different functions """
+
+    # Check that only one interfaz are activated as true
     if READERS['RS232'] == 'true':
         futures = []
         """ Find USB devices by product id """
@@ -35,7 +37,16 @@ def main():
     elif READERS['RS485'] == 'true':
         print("RS485")
     elif READERS['ETHER'] == 'true':
-        print("ETHER")
+        # Receive data from the reader
+        future = reader_pool.submit(core.read_from_ethernet_and_send_to_rabbitmq, READERS['IP'], int(READERS['PORT']),
+                                    READERS['retry_delay'])
+
+        # Wait for the task to complete
+        try:
+            future.result()
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == '__main__':

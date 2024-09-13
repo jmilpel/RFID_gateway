@@ -4,6 +4,7 @@ from config import config
 from mq import rabbitAMQP
 import serial
 import serial.tools.list_ports
+import socket
 import time
 
 loggerGateway = loggerGateway.get_logger()
@@ -34,8 +35,7 @@ def find_usb_devices(id_product):
     if ports:
         rfid_ports = []
         for i in ports:
-            pid = i.pid
-            if pid == int(id_product):
+            if i.pid == int(id_product):
                 rfid_ports.append(i)
         return rfid_ports
     else:
@@ -58,7 +58,6 @@ def publish_dataframes(processed_data, ser):
 @decorator.catch_exceptions
 def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baudrate, retry_delay):
     """Read data from the serial port, process it, and send it to RabbitMQ."""
-    delay = retry_delay
     while True:  # max_retries > 0:
         try:
             # Connect to serial port
@@ -91,4 +90,42 @@ def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baudrate, retry_de
             # max_retries -= 1
             print(f"An error occurred: {e}")
             print(f"Trying to reconnect to", serial_port)
-            time.sleep(delay)
+            time.sleep(retry_delay)
+
+@decorator.catch_exceptions
+def read_from_ethernet_and_send_to_rabbitmq(ip, port, retry_delay):
+    # delay = retry_delay
+    while True:
+        try:
+            # Create a socket and connect to the reader
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            conn = client_socket.connect((ip, port))
+            if conn:
+                print('Connected to', ip, ':', port)
+                loggerGateway.info('Connected to the reader at %s:%s', ip, port)
+
+            loggerRabbit.info('Connecting to RabbitAMQP server ...')
+            amqp_publisher.connect()
+
+            if amqp_publisher.channel:
+                print(ip, ':', port, 'connected to RabbitAMQP - Queue:', BROKER_AMQP['queue'])
+                loggerRabbit.info('%s:%s connected to RabbitAMQP - Queue: %s', ip, port, BROKER_AMQP['queue'])
+
+            while True:
+                """ Read data from serial port, process and publish them """
+                # serial_data = ser.readline().decode('utf-8').strip()
+                # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
+                # value of 3000 is also valid
+                eth_data = client_socket.recv(3000)
+
+                if eth_data:
+                    # Process the serial data
+                    processed_data = manage_received_data(eth_data)
+                    # Publish messages
+                    publish_dataframes(processed_data, ip)
+
+        except Exception as e:
+            # max_retries -= 1
+            print(f"An error occurred: {e}")
+            print(f"Trying to reconnect to", ip, ':', port)
+            time.sleep(retry_delay)
