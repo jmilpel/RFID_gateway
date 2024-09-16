@@ -38,8 +38,8 @@ def main():
         print("RS485")
     elif READERS['ETHER'] == 'true':
         # Receive data from the reader
-        future = reader_pool.submit(core.read_from_ethernet_and_send_to_rabbitmq, READERS['IP'], int(READERS['PORT']),
-                                    READERS['retry_delay'])
+        future = reader_pool.submit(core.read_from_ethernet_and_send_to_rabbitmq, READERS['SERVER_IP'],
+                                    int(READERS['SERVER_PORT']), READERS['SERVER_BUFFER'])
 
         # Wait for the task to complete
         try:

@@ -94,7 +94,53 @@ def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baud_rate, retry_d
 
 
 @decorator.catch_exceptions
-def read_from_ethernet_and_send_to_rabbitmq(ip, port, retry_delay):
+def read_from_ethernet_and_send_to_rabbitmq(ip, port, buffer):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        # Associate the server IP and port to the socket
+        server_socket.bind((ip, port))
+
+        # Listening the entry connections (máx 1 connection at queue)
+        server_socket.listen(1)
+        print(f"Server listening at {ip}:{port}")
+
+        while True:
+            # Waiting for a new connection
+            client_socket, client_address = server_socket.accept()
+            with client_socket:
+                print(f"Connection established at {client_address}")
+
+                # Get the origin port from the client
+                client_ip, client_port = client_address
+                print(f"Client IP: {client_ip}, Client Port: {client_port}")
+
+                # Read the message from the client (SYN in this case)
+                data = client_socket.recv(buffer)
+                if not data:
+                    break
+                print(f"Data received: {data.decode()}")
+
+                # Response to the client with a SYN-ACK message
+                response = "SYN-ACK"
+                client_socket.sendall(response.encode())
+                print(f"Response SYN-ACK sends to the client {client_ip}:{client_port}")
+
+    """
+    # Read data send from the client
+                data = client_socket.recv(BUFFER_SIZE)
+                if data:
+                    print(f"Data received: {data.decode()}")
+
+                    # Here we can proccess or print the data received
+
+                    # Response to the client if its necessary
+                    response = "Data received"
+                    client_socket.sendall(response.encode())
+                    print(f"Response sent to the client {client_ip}:{client_port}")
+    """
+
+
+
+    """
     # delay = retry_delay
     while True:
         try:
@@ -118,20 +164,20 @@ def read_from_ethernet_and_send_to_rabbitmq(ip, port, retry_delay):
                 loggerRabbit.info('%s:%s connected to RabbitAMQP - Queue: %s', ip, port, BROKER_AMQP['queue'])
 
             while True:
-                """ Read data from serial port, process and publish them """
+                # Read data from serial port, process and publish them
                 # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
                 # value of 3000 is also valid
                 eth_data, address = sock.recvfrom(1024)
                 print(eth_data)
 
-                """if eth_data:
+                if eth_data:
                     # Process the serial data
                     processed_data = manage_received_data(eth_data)
                     # Publish messages
-                    publish_dataframes(processed_data, ip)"""
+                    publish_dataframes(processed_data, ip)
 
         except Exception as e:
             # max_retries -= 1
             print(f"An error occurred: {e}")
             print(f"Trying to reconnect to", ip, ':', port)
-            time.sleep(retry_delay)
+            time.sleep(retry_delay)"""
