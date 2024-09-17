@@ -4,7 +4,6 @@ from config import config
 from mq import rabbitAMQP
 import serial
 import serial.tools.list_ports
-import socket
 import time
 
 loggerGateway = loggerGateway.get_logger()
@@ -13,21 +12,37 @@ loggerRabbit = loggerRabbit.get_logger()
 BROKER_AMQP = config.BROKER_AMQP
 # BROKER_MQTT = config.BROKER_MQTT
 
+READER = config.READER
 
 loggerRabbit.info('Initialize AMQP publisher pool ...')
 amqp_publisher = rabbitAMQP.Publisher()
 
+clients_ip = []
 
+
+# Function to
 @decorator.catch_exceptions
-def manage_received_data(serial_data):
+def rabbit_connection(adr):
+    loggerRabbit.info('Connecting to RabbitAMQP server ...')
+    amqp_publisher.connect()
+    if amqp_publisher.channel:
+        print(adr, 'connected to RabbitAMQP - Queue:', BROKER_AMQP['queue'])
+        loggerRabbit.info('%s connected to RabbitAMQP - Queue: %s', adr, BROKER_AMQP['queue'])
+
+
+# Function to
+@decorator.catch_exceptions
+def manage_received_data(data):
     """ Receive the RAW data and split it in dataframes"""
     while True:
-        hex_string = common.convert_data_to_hexstring(serial_data)
+        hex_string = common.convert_data_to_hexstring(data)
         loggerGateway.info('-->[RAW DATA]: %s', hex_string)
+        # print('-->[RAW DATA]:', hex_string)
         dataframes = hex_string.split("1500")
         return dataframes
 
 
+# Function to find all the readers connected via USB to the server
 @decorator.catch_exceptions
 def find_usb_devices(id_product):
     """Find a USB device with the given PID."""
@@ -42,8 +57,9 @@ def find_usb_devices(id_product):
         return None
 
 
+# Function to
 @decorator.catch_exceptions
-def publish_dataframes(processed_data, ser):
+def com_publish_dataframes(processed_data, ser):
     """ Complete the dataframes with current timestamp
      Consider include check the CRC-16 value  """
     for dataframe in processed_data:
@@ -55,8 +71,49 @@ def publish_dataframes(processed_data, ser):
             print(dataframe)
 
 
+# Function to
 @decorator.catch_exceptions
-def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baud_rate, retry_delay):
+def eth_publish_dataframes(processed_data, ip):
+    """ Complete the dataframes with current timestamp
+     Consider include check the CRC-16 value  """
+    for dataframe in processed_data:
+        if dataframe:
+            client_ip = ip.encode().hex()
+            timestamp = common.get_now_timestamp()
+            if dataframe != 'aaaaff06c10215e8a2':
+                dataframe = "1500" + dataframe + client_ip + common.convert_int_to_hex_string(timestamp)
+                amqp_publisher.publish(dataframe)
+                print(dataframe)
+
+
+# Function to control every connection with reader by ethernet
+@decorator.catch_exceptions
+def handle_client(client_socket, client_address):
+    if client_address not in clients_ip:
+        clients_ip.append(client_address)
+
+        # Get the client's origin port
+        client_ip, client_port = client_address
+        loggerGateway.info('Connection established with at %s:%s', client_ip, client_port)
+        print(f"Connection established with {client_ip}:{client_port}")
+
+        rabbit_connection(client_ip)
+
+        while True:
+            data = client_socket.recv(int(READER['buffer']))
+            if data:
+                # Process the serial data
+                processed_data = manage_received_data(data)
+                # Publish messages
+                eth_publish_dataframes(processed_data, str(client_ip)[-4:])
+
+        client_socket.close()
+        print(f"Connection closed with {client_address}.")
+
+
+# Function to
+@decorator.catch_exceptions
+def handle_serial(serial_port, serial_baud_rate, retry_delay, buffer):
     """Read data from the serial port, process it, and send it to RabbitMQ."""
     while True:  # max_retries > 0:
         try:
@@ -66,118 +123,23 @@ def read_from_serial_and_send_to_rabbitmq(serial_port, serial_baud_rate, retry_d
                 print('Connected to', ser.port)
                 loggerGateway.info('Connected to the reader at %s', ser.port)
 
-            loggerRabbit.info('Connecting to RabbitAMQP server ...')
-            amqp_publisher.connect()
-
-            if amqp_publisher.channel:
-                print(ser.port, 'connected to RabbitAMQP - Queue:', BROKER_AMQP['queue'])
-                loggerRabbit.info('%s connected to RabbitAMQP - Queue: %s', ser.port, BROKER_AMQP['queue'])
+            rabbit_connection(ser.port)
 
             while True:
                 """ Read data from serial port, process and publish them """
                 # serial_data = ser.readline().decode('utf-8').strip()
                 # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
                 # value of 3000 is also valid
-                serial_data = ser.read(1024)
+                serial_data = ser.read(buffer)
 
                 if serial_data:
                     # Process the serial data
                     processed_data = manage_received_data(serial_data)
                     # Publish messages
-                    publish_dataframes(processed_data, ser)
+                    com_publish_dataframes(processed_data, ser)
 
         except Exception as e:
             # max_retries -= 1
             print(f"An error occurred: {e}")
             print(f"Trying to reconnect to", serial_port)
             time.sleep(retry_delay)
-
-
-@decorator.catch_exceptions
-def read_from_ethernet_and_send_to_rabbitmq(ip, port, buffer):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-        # Associate the server IP and port to the socket
-        server_socket.bind((ip, port))
-
-        # Listening the entry connections (máx 1 connection at queue)
-        server_socket.listen(1)
-        print(f"Server listening at {ip}:{port}")
-
-        while True:
-            # Waiting for a new connection
-            client_socket, client_address = server_socket.accept()
-            with client_socket:
-                print(f"Connection established at {client_address}")
-
-                # Get the origin port from the client
-                client_ip, client_port = client_address
-                print(f"Client IP: {client_ip}, Client Port: {client_port}")
-
-                # Read the message from the client (SYN in this case)
-                data = client_socket.recv(buffer)
-                if not data:
-                    break
-                print(f"Data received: {data.decode()}")
-
-                # Response to the client with a SYN-ACK message
-                response = "SYN-ACK"
-                client_socket.sendall(response.encode())
-                print(f"Response SYN-ACK sends to the client {client_ip}:{client_port}")
-
-    """
-    # Read data send from the client
-                data = client_socket.recv(BUFFER_SIZE)
-                if data:
-                    print(f"Data received: {data.decode()}")
-
-                    # Here we can proccess or print the data received
-
-                    # Response to the client if its necessary
-                    response = "Data received"
-                    client_socket.sendall(response.encode())
-                    print(f"Response sent to the client {client_ip}:{client_port}")
-    """
-
-
-
-    """
-    # delay = retry_delay
-    while True:
-        try:
-            # Create a socket and connect to the reader
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Connect to a remote host and port
-            error_code = sock.connect_ex((ip, port))
-
-            if error_code == 0:
-                print('Connection established successfully to', ip, ':', port)
-                loggerGateway.info('Connected to the reader at IP --> %s:%s', ip, port)
-            else:
-                print('Error connecting:', error_code)
-                loggerGateway.info('Error connecting %s', error_code)
-
-            loggerRabbit.info('Connecting to RabbitAMQP server ...')
-            amqp_publisher.connect()
-
-            if amqp_publisher.channel:
-                print(ip, ':', port, 'connected to RabbitAMQP - Queue:', BROKER_AMQP['queue'])
-                loggerRabbit.info('%s:%s connected to RabbitAMQP - Queue: %s', ip, port, BROKER_AMQP['queue'])
-
-            while True:
-                # Read data from serial port, process and publish them
-                # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
-                # value of 3000 is also valid
-                eth_data, address = sock.recvfrom(1024)
-                print(eth_data)
-
-                if eth_data:
-                    # Process the serial data
-                    processed_data = manage_received_data(eth_data)
-                    # Publish messages
-                    publish_dataframes(processed_data, ip)
-
-        except Exception as e:
-            # max_retries -= 1
-            print(f"An error occurred: {e}")
-            print(f"Trying to reconnect to", ip, ':', port)
-            time.sleep(retry_delay)"""
