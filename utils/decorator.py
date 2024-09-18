@@ -21,8 +21,8 @@ def catch_exceptions(function):
         except Exception as error:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             loggerGateway.error("%s -- function %s -- args %s --kwargs %s -- line %s: %s",
-                              os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__, args, kwargs,
-                              traceback.extract_tb(exc_tb)[-1][1], str(error))
+                                os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__, args, kwargs,
+                                traceback.extract_tb(exc_tb)[-1][1], str(error))
     return decorator
 
 
@@ -34,9 +34,12 @@ def catch_exceptions_and_performance(function):
             result = function(*args, **kwargs)
             end = datetime.datetime.now()
             execution_time = ((end - start) * 1000).seconds
-            loggerGateway.info("%s-%s-%d ms", os.path.split(function.__code__.co_filename)[1], function.__name__, execution_time)
+            loggerGateway.info("%s-%s-%d ms", os.path.split(function.__code__.co_filename)[1], function.__name__,
+                               execution_time)
             return result
         except Exception as error:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            loggerGateway.error("%s -- function %s -- line %s: %s", os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__, traceback.extract_tb(exc_tb)[-1][1], str(error))
+            loggerGateway.error("%s -- function %s -- line %s: %s",
+                                os.path.split(traceback.extract_tb(exc_tb)[-1][0])[1], function.__name__,
+                                traceback.extract_tb(exc_tb)[-1][1], str(error))
     return decorator
