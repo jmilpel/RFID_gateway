@@ -9,7 +9,6 @@ INTERFACE = CONFIG['interface']
 LOG = CONFIG['log']
 BROKER_AMQP = CONFIG['broker_amqp']
 
-
 LOG_FOLDER = LOG['folder']
 LOG_DAYS_FOR_ROTATE = LOG['days_for_rotate']
 LOG_GATEWAY_FILE = LOG['gateway_file']

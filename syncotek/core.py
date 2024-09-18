@@ -115,31 +115,31 @@ def handle_client(client_socket, client_address):
 @decorator.catch_exceptions
 def handle_serial(serial_port, serial_baud_rate, retry_delay, buffer):
     """Read data from the serial port, process it, and send it to RabbitMQ."""
-    while True:  # max_retries > 0:
-        try:
-            # Connect to serial port
-            ser = serial.Serial(serial_port, serial_baud_rate, timeout=0.2)  # 57600
-            if ser:
-                print('Connected to', ser.port)
-                loggerGateway.info('Connected to the reader at %s', ser.port)
+    # while True:  # max_retries > 0:
+    try:
+        # Connect to serial port
+        ser = serial.Serial(serial_port, serial_baud_rate, timeout=0.2)  # 57600
+        if ser:
+            print('Connected to', ser.port)
+            loggerGateway.info('Connected to the reader at %s', ser.port)
 
-            rabbit_connection(ser.port)
+        rabbit_connection(ser.port)
 
-            while True:
-                """ Read data from serial port, process and publish them """
-                # serial_data = ser.readline().decode('utf-8').strip()
-                # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
-                # value of 3000 is also valid
-                serial_data = ser.read(buffer)
+        while True:
+            """ Read data from serial port, process and publish them """
+            # serial_data = ser.readline().decode('utf-8').strip()
+            # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
+            # value of 3000 is also valid
+            data = ser.read(buffer)
 
-                if serial_data:
-                    # Process the serial data
-                    processed_data = manage_received_data(serial_data)
-                    # Publish messages
-                    com_publish_dataframes(processed_data, ser)
+            if data:
+                # Process the serial data
+                processed_data = manage_received_data(data)
+                # Publish messages
+                com_publish_dataframes(processed_data, ser)
 
-        except Exception as e:
-            # max_retries -= 1
-            print(f"An error occurred: {e}")
-            print(f"Trying to reconnect to", serial_port)
-            time.sleep(retry_delay)
+    except Exception as e:
+        # max_retries -= 1
+        print(f"An error occurred: {e}")
+        print(f"Trying to reconnect to", serial_port)
+        time.sleep(retry_delay)

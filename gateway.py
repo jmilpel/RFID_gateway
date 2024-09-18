@@ -21,10 +21,10 @@ def main():
         # Receive data from the reader
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_server:
             socket_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # Associate to the socket the server IP and port
+            # Associate the server IP and port to the socket
             socket_server.bind((READER['server_ip'], int(READER['server_port'])))
 
-            # Listening the entry connections (maxi 1 connection in queue)
+            # Listening the entry connections (max 1 connection in queue)
             socket_server.listen(1)
             print(f"Gateway is now listening at {READER['server_ip']}:{READER['server_port']}")
             loggerGateway.info('Gateway is now listening at %s:%s', READER['server_ip'], READER['server_port'])
