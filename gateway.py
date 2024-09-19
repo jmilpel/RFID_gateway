@@ -18,6 +18,7 @@ def main():
     # Depends on the type of connection we use different methods
     # Check which interface is active
     if INTERFACE['ether'] == 'true':
+        clients_ip = []
         # Receive data from the reader
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_server:
             socket_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -34,7 +35,8 @@ def main():
                 # Waiting for a new connection
                 client_socket, client_address = socket_server.accept()
                 # Send the connection to the ProcessPool to manage it
-                reader_pool.submit(core.handle_client, client_socket, client_address)
+                reader_pool.submit(core.handle_client, client_socket, client_address, clients_ip, READER['retry_delay'],
+                                   int(READER['server_buffer']))
 
     elif INTERFACE['rs232'] == 'true':
         futures = []
@@ -44,7 +46,7 @@ def main():
             index = ports.index(port)
             variable_name = "future" + str(index)
             locals()[variable_name] = reader_pool.submit(core.handle_serial, port.device, READER['baud_rate'],
-                                                         READER['retry_delay'], READER['buffer'])
+                                                         READER['retry_delay'], int(READER['server_buffer']))
             futures.append(locals()[variable_name])
         # Wait for the task to complete
         try:

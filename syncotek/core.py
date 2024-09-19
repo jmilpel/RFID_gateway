@@ -17,8 +17,6 @@ READER = config.READER
 loggerRabbit.info('Initialize AMQP publisher pool ...')
 amqp_publisher = rabbitAMQP.Publisher()
 
-clients_ip = []
-
 
 # Function to
 @decorator.catch_exceptions
@@ -88,27 +86,33 @@ def eth_publish_dataframes(processed_data, ip):
 
 # Function to control every connection with reader by ethernet
 @decorator.catch_exceptions
-def handle_client(client_socket, client_address):
-    if client_address not in clients_ip:
-        clients_ip.append(client_address)
+def handle_client(client_socket, client_address, clients_ip, retry_delay, buffer):
+    try:
+        if client_address not in clients_ip:
+            clients_ip.append(client_address)
 
-        # Get the client's origin port
-        client_ip, client_port = client_address
-        loggerGateway.info('Connection established with at %s:%s', client_ip, client_port)
-        print(f"Connection established with {client_ip}:{client_port}")
+            # Get the client's origin port
+            client_ip, client_port = client_address
+            loggerGateway.info('Connection established with at %s:%s', client_ip, client_port)
+            print(f"Connection established with {client_ip}:{client_port}")
 
-        rabbit_connection(client_ip)
+            rabbit_connection(client_ip)
 
-        while True:
-            data = client_socket.recv(int(READER['buffer']))
-            if data:
-                # Process the serial data
-                processed_data = manage_received_data(data)
-                # Publish messages
-                eth_publish_dataframes(processed_data, str(client_ip)[-4:])
+            while True:
+                data = client_socket.recv(buffer)
+                if data:
+                    # Process the serial data
+                    processed_data = manage_received_data(data)
+                    # Publish messages
+                    eth_publish_dataframes(processed_data, str(client_ip)[-4:])
 
-        client_socket.close()
-        print(f"Connection closed with {client_address}.")
+            client_socket.close()
+            print(f"Connection closed with {client_address}.")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        print(f"Trying to reconnect to", client_address)
+        time.sleep(retry_delay)
 
 
 # Function to
@@ -130,11 +134,11 @@ def handle_serial(serial_port, serial_baud_rate, retry_delay, buffer):
             # serial_data = ser.readline().decode('utf-8').strip()
             # Using readline() we had no complete frames. Using read(3000) we have complete frames. Maybe lower
             # value of 3000 is also valid
-            data = ser.read(buffer)
+            serial_data = ser.read(buffer)
 
-            if data:
+            if serial_data:
                 # Process the serial data
-                processed_data = manage_received_data(data)
+                processed_data = manage_received_data(serial_data)
                 # Publish messages
                 com_publish_dataframes(processed_data, ser)
 
